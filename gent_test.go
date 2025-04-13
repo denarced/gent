@@ -16,11 +16,13 @@ func TestSet(t *testing.T) {
 	req.NotNil(set.m)
 	req.Empty(set.m)
 	req.Equal(0, set.Len(), "empty == 0")
+	req.Equal(set.Len(), set.Count(), "len == count")
 
 	item := "teddy"
 	req.False(set.Has(item), "no teddy yet")
 	req.True(set.Add(item), "teddy added")
 	req.Equal(1, set.Len(), "with teddy len is 1")
+	req.Equal(set.Len(), set.Count(), "with teddy len+count are 1")
 	req.False(set.Add(item), "teddy not added again")
 	req.True(set.Has(item), "teddy definitely exists")
 	req.True(set.Remove(item), "teddy was removed")

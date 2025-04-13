@@ -89,6 +89,11 @@ func (v *Set[T]) Len() int {
 	return len(v.m)
 }
 
+// Count returns the number of items in the set.
+func (v *Set[T]) Count() int {
+	return len(v.m)
+}
+
 // Remove removes an item in the set, returns true if it was. I.e. if it existed.
 func (v *Set[T]) Remove(item T) (existed bool) {
 	_, existed = v.m[item]
