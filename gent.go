@@ -1,3 +1,4 @@
+// Package gent contains miscellaneous tools that the author keeps rewriting in various projects.
 package gent
 
 import (
@@ -12,7 +13,7 @@ type Pair[T any, U any] struct {
 	Second U
 }
 
-// NewPair create a Pair.
+// NewPair create an initialized [gent.Pair].
 func NewPair[T any, U any](first T, second U) Pair[T, U] {
 	return Pair[T, U]{First: first, Second: second}
 }
@@ -22,7 +23,7 @@ type Set[T comparable] struct {
 	m map[T]bool
 }
 
-// NewSet creates a new Set.
+// NewSet creates a new [gent.Set].
 func NewSet[T comparable](items ...T) *Set[T] {
 	set := &Set[T]{m: map[T]bool{}}
 	for _, each := range items {
@@ -31,7 +32,8 @@ func NewSet[T comparable](items ...T) *Set[T] {
 	return set
 }
 
-// Add item to the set, return true if it was added. Otherwise it already existed.
+// Add item to the set, return true if it was added.
+// Otherwise it already existed and wasn't added.
 func (v *Set[T]) Add(item T) (added bool) {
 	_, existed := v.m[item]
 	if existed {
@@ -47,7 +49,7 @@ func (v *Set[T]) Clear() {
 	v.m = map[T]bool{}
 }
 
-// Equal returns true when sets are equivalent in content.
+// Equal returns true when the sets contain the exact same items.
 func (v *Set[T]) Equal(s *Set[T]) bool {
 	if len(v.m) != s.Len() {
 		return false
@@ -61,6 +63,7 @@ func (v *Set[T]) Equal(s *Set[T]) bool {
 }
 
 // Contains checks if item exists in the set.
+// Alias for [gent.Set.Has].
 func (v *Set[T]) Contains(item T) bool {
 	return v.Has(item)
 }
@@ -72,6 +75,7 @@ func (v *Set[T]) Has(item T) bool {
 }
 
 // ForEach iterates all items in the set, calls f for each item, stops if stop is called.
+// Use [gent.ForEachAll] if there's no need to stop iteration.
 func (v *Set[T]) ForEach(f func(each T, stop func())) {
 	breaker := false
 	for each := range v.m {
@@ -84,24 +88,35 @@ func (v *Set[T]) ForEach(f func(each T, stop func())) {
 	}
 }
 
+// ForEachAll iterates all items in the set and calls f for each item.
+// Use [gent.ForEach] if you need to stop iteration.
+func (v *Set[T]) ForEachAll(f func(each T)) {
+	for key := range v.m {
+		f(key)
+	}
+}
+
 // Len returns the number of items in the set.
 func (v *Set[T]) Len() int {
 	return len(v.m)
 }
 
 // Count returns the number of items in the set.
+// Alias for [gent.Set.Len].
 func (v *Set[T]) Count() int {
-	return len(v.m)
+	return v.Len()
 }
 
-// Remove removes an item in the set, returns true if it was. I.e. if it existed.
+// Remove removes an item in the set, returns true if it was.
+// I.e. if it existed.
 func (v *Set[T]) Remove(item T) (existed bool) {
 	_, existed = v.m[item]
 	delete(v.m, item)
 	return
 }
 
-// ToSlice returns a slice with all set items. Set itself doesn't change.
+// ToSlice returns a slice with all set items.
+// Set itself doesn't change.
 func (v *Set[T]) ToSlice() []T {
 	keys := []T{}
 	for each := range v.m {
@@ -111,6 +126,8 @@ func (v *Set[T]) ToSlice() []T {
 }
 
 // ReadLines read all lines in file filep.
+// Empty lines are included.
+// Returned lines do not contain newlines at the end.
 func ReadLines(filep string) (lines []string, err error) {
 	var f *os.File
 	if f, err = os.Open(filep); err != nil {
@@ -126,6 +143,7 @@ func ReadLines(filep string) (lines []string, err error) {
 }
 
 // Tri returns one of the two values based on the condition.
+// I.e. this is a ternary "operator".
 func Tri[T any](condition bool, a, b T) T {
 	if condition {
 		return a
@@ -142,7 +160,8 @@ func Map[T any, U any](s []T, f func(T) U) []U {
 	return mapped
 }
 
-// Filter values in s with f. When f returns true, item is included in the response slice.
+// Filter values in s with f.
+// When f returns true, item is included in the response slice.
 func Filter[T any](s []T, f func(T) bool) []T {
 	var filtered []T
 	for _, v := range s {
@@ -153,7 +172,9 @@ func Filter[T any](s []T, f func(T) bool) []T {
 	return filtered
 }
 
-// OrPanic2 return function that returns value if err is nil, else panics with message.
+// OrPanic2 returns function that returns value if err is nil, else panics with message.
+// Useful for cases where failure should result in panic
+// and you don't want to deal with the returned error.
 func OrPanic2[T any](value T, err error) func(message string) T {
 	if err == nil {
 		return func(_ string) T {

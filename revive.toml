@@ -1,0 +1,26 @@
+ignoreGeneratedHeader = false
+severity = "warning"
+confidence = 0.8
+errorCode = 0
+warningCode = 0
+
+enableAllRules = true
+
+[rule.add-constant]
+Disabled = true
+[rule.bare-return]
+Disabled = true
+[rule.cognitive-complexity]
+arguments = [21]
+[rule.cyclomatic]
+arguments = [14]
+[rule.unhandled-error]
+arguments = ["fmt.Fprintf", "fmt.Println", "fmt.Printf", "fmt.Fprintln", "fmt.FPrint", "fmt.Scanln", "fmt.Print"]
+[rule.line-length-limit]
+arguments = [100]
+[rule.flag-parameter]
+Disabled = true
+[rule.function-length]
+Exclude=["TEST"]
+[rule.max-public-structs]
+Disabled = true
