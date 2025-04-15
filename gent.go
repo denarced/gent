@@ -5,6 +5,12 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
+)
+
+var (
+	nonSafeFilenamePattern = regexp.MustCompile(`[^0-9a-zA-Z-._]`)
 )
 
 // Pair is a pair of values.
@@ -184,4 +190,90 @@ func OrPanic2[T any](value T, err error) func(message string) T {
 	return func(message string) T {
 		panic(fmt.Sprintf("Message: %s. Error: %s.", message, err))
 	}
+}
+
+// A SnapshotSuite is a suite of snapshot tests with a shared directory for the snapshot files.
+// It is made of [gent.Snapshot]s.
+type SnapshotSuite struct {
+	rootDir string
+}
+
+// NewSnapshotSuite creates a [gent.SnapshotSuite] with a root directory.
+// Usually it's under "testdata".
+func NewSnapshotSuite(rootDir string) *SnapshotSuite {
+	return &SnapshotSuite{rootDir: rootDir}
+}
+
+// VerifyFunc is used to assert that snapshot matches to the string that code produced.
+// This is your standard "assertEqual" function in any unit test library.
+type VerifyFunc func(expected, actual, message string)
+
+// Snapshot represents a single test with a snapshot file.
+type Snapshot struct {
+	// Name of the test that's also the last part of the snapshot file's filepath.
+	Name   string
+	filep  string
+	verify bool
+	equal  VerifyFunc
+}
+
+// NewSnapshot creates a snapshot.
+// Name is [gent.Snapshot.Name] and with [gent.SnapshotSuite.rootDir],
+// becomes the full filepath of the snapshot file.
+// When verify is false, snapshots are written, and tests won't fail.
+// That's how you initialize or update snapshots.
+// When verify is true and snapshot file doesn't exist or it's empty,
+// content produced by the tested code is written.
+// And finally, when verify is true and the snapshot file exists,
+// equal function is used to assert equality.
+func (v *SnapshotSuite) NewSnapshot(name string, verify bool, equal VerifyFunc) *Snapshot {
+	return &Snapshot{
+		Name:   name,
+		filep:  v.deriveSnapshotFilep(name),
+		verify: verify,
+		equal:  equal,
+	}
+}
+
+func (v *SnapshotSuite) deriveSnapshotFilep(name string) string {
+	return filepath.Join(v.rootDir, name)
+}
+
+func (v *Snapshot) read() (string, error) {
+	b, err := os.ReadFile(v.filep)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return string(b), nil
+}
+
+func (v *Snapshot) write(content string) error {
+	return os.WriteFile(v.filep, []byte(content), 0644)
+}
+
+// Run the snapshot process according to parameters set in [gent.SnapshotSuite.NewSnapshot].
+// Error is returned when something unexpected fails, not when the test itself fails.
+// Determining whether any given test fails
+// is left for "equal" function defined in [gent.SnapshotSuite.NewSnapshot].
+func (v *Snapshot) Run(view string) error {
+	content, err := v.read()
+	if err != nil {
+		return err
+	}
+	if v.verify && content != "" {
+		v.equal(content, view, v.Name)
+		return nil
+	}
+	if view != content {
+		return v.write(view)
+	}
+	return nil
+}
+
+// ToSafeFilename replaces all non-safe characters with underscore.
+func ToSafeFilename(s string) string {
+	return nonSafeFilenamePattern.ReplaceAllString(s, "_")
 }
