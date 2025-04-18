@@ -3,10 +3,14 @@ package gent
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 var (
@@ -276,4 +280,84 @@ func (v *Snapshot) Run(view string) error {
 // ToSafeFilename replaces all non-safe characters with underscore.
 func ToSafeFilename(s string) string {
 	return nonSafeFilenamePattern.ReplaceAllString(s, "_")
+}
+
+// RunBubbleTeaSnapshots runs snapshots for bubbletea TUIs.
+func RunBubbleTeaSnapshots(
+	snapshotSuite *SnapshotSuite,
+	m tea.Model,
+	verify bool,
+	seriesID string,
+	equal VerifyFunc,
+) {
+	runSnapshot := func(i int) {
+		snapshot := snapshotSuite.NewSnapshot(
+			fmt.Sprintf("%s_%03d", seriesID, i),
+			verify,
+			equal)
+		if err := snapshot.Run(m.View()); err != nil {
+			panic(err)
+		}
+	}
+	messageGroups := readMessageGroups(snapshotSuite.rootDir, seriesID)
+	// Quick test elsewhere showed that normal run does init, view, update, and view.
+	cmd := m.Init()
+	m.View()
+	m = runUpdates(m, cmd)
+	runSnapshot(0)
+
+	for i, group := range messageGroups {
+		for _, each := range group {
+			m = runUpdates(m, createKey(each))
+		}
+		runSnapshot(i + 1)
+	}
+}
+
+func runUpdates(m tea.Model, msg tea.Msg) tea.Model {
+	var cmd tea.Cmd
+	m, cmd = m.Update(msg)
+	counter := 100
+	for cmd != nil {
+		m, cmd = m.Update(cmd())
+		counter--
+		if counter <= 0 {
+			panic("counter == 0, eternal loop")
+		}
+	}
+	return m
+}
+
+func readMessageGroups(snapshotRootDir, id string) [][]string {
+	filep := filepath.Join(snapshotRootDir, fmt.Sprintf("%s.txt", id))
+	b, err := os.ReadFile(filep)
+	if err != nil {
+		panic(err)
+	}
+	groups := [][]string{}
+	for _, each := range bytes.Split(b, []byte{'\n'}) {
+		line := string(bytes.TrimSpace(each))
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {
+			continue
+		}
+		groups = append(groups, strings.Split(line, ","))
+	}
+	return groups
+}
+
+func createKey(s string) tea.KeyMsg {
+	switch s {
+	case "enter":
+		return tea.KeyMsg{Type: tea.KeyEnter}
+	case "tab":
+		return tea.KeyMsg{Type: tea.KeyTab}
+	case "esc":
+		return tea.KeyMsg{Type: tea.KeyEsc}
+	case "up":
+		return tea.KeyMsg{Type: tea.KeyUp}
+	case "down":
+		return tea.KeyMsg{Type: tea.KeyDown}
+	default:
+		return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+	}
 }
