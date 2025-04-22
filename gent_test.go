@@ -1,6 +1,7 @@
 package gent
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -149,7 +150,7 @@ func TestOrPanic2(t *testing.T) {
 	req.Equal("wow", OrPanic2("wow", nil)(""))
 	req.PanicsWithValue(
 		"Message: killed. Error: turn.",
-		func() { OrPanic2("", fmt.Errorf("turn"))("killed") })
+		func() { OrPanic2("", errors.New("turn"))("killed") })
 }
 
 func ExampleOrPanic2() {
@@ -161,7 +162,7 @@ func ExampleOrPanic2() {
 
 	divide := func(a, b int) (int, error) {
 		if b == 0 {
-			return 0, fmt.Errorf("can't divide with zero")
+			return 0, errors.New("can't divide with zero")
 		}
 		return a / b, nil
 	}
@@ -239,4 +240,20 @@ func TestSnapshot(t *testing.T) {
 			o:    []tick{{2, 2}, {2, 1}, {0, 2}},
 		},
 	)
+}
+
+func TestNewOption(t *testing.T) {
+	snapshot := Snapshot{
+		Name:   "my-name-is-vibe",
+		filep:  "/a/b/c.pdf",
+		verify: true,
+	}
+	require.Equal(
+		t,
+		snapshot,
+		NewOption(
+			Snapshot{filep: snapshot.filep},
+			func(s *Snapshot) { s.Name = snapshot.Name },
+			func(s *Snapshot) { s.verify = snapshot.verify },
+		))
 }

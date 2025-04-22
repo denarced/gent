@@ -421,12 +421,12 @@ func (v *AssertFs) NotExists(path, message string) {
 
 // ReadLines reads lines of file.
 func (v *AssertFs) ReadLines(filep, message string) []string {
-	bytes, err := v.fs.ReadFile(filep)
+	b, err := v.fs.ReadFile(filep)
 	v.req.Nilf(err, "read lines, path: %s, message: %s", filep, message)
-	if len(bytes) == 0 {
+	if len(b) == 0 {
 		return []string{}
 	}
-	return strings.Split(string(bytes), "\n")
+	return strings.Split(string(b), "\n")
 }
 
 // MkdirAll creates the dirp.
@@ -442,6 +442,14 @@ func (v *AssertFs) Contains(filep, content, message string) {
 }
 
 // WriteBytes writes bytes to filep.
-func (v *AssertFs) WriteBytes(filep string, bytes []byte) error {
-	return v.fs.WriteFile(filep, bytes, 0600)
+func (v *AssertFs) WriteBytes(filep string, b []byte) error {
+	return v.fs.WriteFile(filep, b, 0600)
+}
+
+// NewOption is a general function to implement option pattern.
+func NewOption[T any](t T, options ...func(t *T)) T {
+	for _, each := range options {
+		each(&t)
+	}
+	return t
 }
