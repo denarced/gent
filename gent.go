@@ -46,7 +46,9 @@ func (v *Set[T]) Add(item T) (added bool) {
 
 // Clear the set, remove all items.
 func (v *Set[T]) Clear() {
-	v.m = map[T]bool{}
+	for k := range v.m {
+		delete(v.m, k)
+	}
 }
 
 // Equal returns true when the sets contain the exact same items.
